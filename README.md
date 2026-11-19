@@ -2,7 +2,7 @@
 
 # BuilderKit
 
-**Dev toolkit for [Hyperliquid builder codes](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/builder-codes).** Calculators, payload makers and debuggers that take the guesswork out of approvals, order tagging and signatures.
+**Dev toolkit for [Hyperliquid builder codes](https://hyperliquid.gitbook.io/hyperliquid-docs/trading/builder-codes).** Fee calculator, approval and order signing, signature inspector, info queries and fills analyzer.
 
 **Live:** https://andrewdamelio.github.io/builderkit/
 

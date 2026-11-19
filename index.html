@@ -7,7 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%20width%3D%2264%22%20height%3D%2264%22%3E%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2215%22%20fill%3D%22%23b6ff4d%22/%3E%20%20%3Cpath%20fill%3D%22%230a0c0b%22%20fill-rule%3D%22evenodd%22%20d%3D%22M12%2011h9v14h13a8%208%200%200%201%208%208v12a8%208%200%200%201-8%208H12zM21%2033v12h12V33z%22/%3E%20%20%3Crect%20class%3D%22cur%22%20x%3D%2244%22%20y%3D%2248%22%20width%3D%2212%22%20height%3D%225%22%20rx%3D%221%22%20fill%3D%22%230a0c0b%22/%3E%3C/svg%3E">
 <meta name="description" content="Dev toolkit for Hyperliquid builder codes: fee calculator, approval and order signing, signature inspector, fills analyzer.">
 <meta property="og:title" content="BuilderKit — Hyperliquid Builder Code Toolkit">
-<meta property="og:description" content="Ship builder codes without the signature guesswork. Calculators, payload makers and debuggers. Runs fully in your browser.">
+<meta property="og:description" content="Fee calculator, approval and order signing, signature inspector, info queries and fills analyzer for Hyperliquid builder codes. Runs locally in the browser.">
 <meta property="og:image" content="https://andrewdamelio.github.io/builderkit/assets/og.png">
 <meta property="og:url" content="https://andrewdamelio.github.io/builderkit/">
 <meta name="twitter:card" content="summary_large_image">
@@ -107,6 +107,29 @@ section.view.on{display:block;animation:fade .25s ease}
 .flow b{display:block;font-size:14px;margin:4px 0 2px}
 .flow span{font-size:12.5px;color:var(--dim)}
 @media(max-width:820px){.flow{grid-template-columns:1fr 1fr}.flow div:nth-child(2){border-right:0}.flow div:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+.homehead{padding:6px 0 22px}
+.homehead h1{font-size:24px;letter-spacing:-.02em;margin:0 0 4px}
+.homehead p{margin:0;color:var(--dim);max-width:70ch}
+.homegrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:14px;align-items:start}
+@media(max-width:820px){.homegrid{grid-template-columns:1fr}}
+.card.pad0{padding:0}
+.cardhead{padding:14px 16px 0;margin-bottom:6px!important}
+.toollist a{display:grid;grid-template-columns:30px 1fr 16px;gap:10px;align-items:center;padding:11px 16px;border-top:1px solid var(--line);text-decoration:none;color:var(--ink);transition:background .12s}
+.toollist a:first-child{border-top:0}
+.toollist a:hover{background:var(--bg2)}
+.toollist a:hover i{color:var(--acc)}
+.toollist b{font-size:14.5px;display:block}
+.toollist p{margin:1px 0 0;color:var(--dim);font-size:12.5px}
+.toollist i{font-style:normal;color:var(--mute);font-family:var(--mono)}
+.life{margin:0;padding-left:20px;color:var(--dim);font-size:13px}
+.life li{margin-bottom:7px}.life li::marker{color:var(--acc);font-family:var(--mono)}
+.life b{color:var(--ink);font-weight:600}
+.ref>div{display:grid;grid-template-columns:118px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 16px;border-top:1px solid var(--line)}
+.ref>div:first-child{border-top:0}
+.ref span{font-size:12px;color:var(--dim)}
+.ref code{font-family:var(--mono);font-size:12px;color:var(--ink);overflow-wrap:anywhere}
+.ref .btn{opacity:.55}.ref>div:hover .btn{opacity:1}
+@media(max-width:520px){.ref>div{grid-template-columns:1fr auto}.ref span{grid-column:1/-1;margin-bottom:-6px}}
 /* stats */
 .stat{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px}
 .stat span{display:block;font-family:var(--mono);font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
@@ -191,25 +214,53 @@ svg text{font-family:var(--mono)}
 
 <!-- HOME -->
 <section class="view" id="v-home">
-  <div class="hero">
-    <div class="kicker">Builder codes · dev toolkit</div>
-    <h1>Ship builder codes <em>without</em> the signature guesswork.</h1>
-    <p>Calculators, payload makers and debuggers for Hyperliquid builder codes. Everything runs in your browser: EIP-712 signing, msgpack action hashing and LZ4 fills decoding, all checked against the official Python SDK.</p>
+  <div class="homehead">
+    <h1>Hyperliquid builder code tools</h1>
+    <p>Approvals, order tagging, signature debugging and revenue tracking. Runs locally; signing verified against the official Python SDK.</p>
   </div>
-  <div class="flow">
-    <div><i>01 · USER</i><b>Approve max fee</b><span>Main wallet signs <code>approveBuilderFee</code></span></div>
-    <div><i>02 · APP</i><b>Tag orders</b><span><code>builder: {b, f}</code> on each order action</span></div>
-    <div><i>03 · CHAIN</i><b>Fee on fill</b><span>Charged onchain as part of the fee logic</span></div>
-    <div><i>04 · BUILDER</i><b>Claim &amp; track</b><span>Referral rewards claim + fills dataset</span></div>
-  </div>
-  <div class="tools">
-    <a class="tool" href="#fees"><span class="num">01</span><b>Fee calculator</b><p>Convert f ↔ bps ↔ %, check caps, model revenue against routed volume.</p></a>
-    <a class="tool" href="#approve"><span class="num">02</span><b>Approval maker</b><p>Build and sign <code>approveBuilderFee</code>: typed data, hash, exchange body, SDK snippets.</p></a>
-    <a class="tool" href="#order"><span class="num">03</span><b>Order tagger</b><p>Attach a builder code to an order, compute the action hash, sign as an agent.</p></a>
-    <a class="tool" href="#inspect"><span class="num">04</span><b>Signature inspector</b><p>Paste a failing /exchange body. Recover the signer and see what's wrong.</p></a>
-    <a class="tool" href="#query"><span class="num">05</span><b>Info query builder</b><p>Generate maxBuilderFee / referral / account checks, then paste the response to decode it.</p></a>
-    <a class="tool" href="#fills"><span class="num">06</span><b>Fills analyzer</b><p>Generate dataset URLs, drop a <code>.csv.lz4</code>, get revenue, users and markets.</p></a>
-    <a class="tool" href="#preflight"><span class="num">07</span><b>Preflight checklist</b><p>Every requirement between you and your first builder fee.</p></a>
+  <div class="homegrid">
+    <div>
+      <div class="card pad0">
+        <h3 class="cardhead">Tools</h3>
+        <div class="toollist">
+          <a href="#fees"><span class="num">01</span><div><b>Fee calculator</b><p>f ↔ bps ↔ %, cap checks, revenue model</p></div><i>→</i></a>
+          <a href="#approve"><span class="num">02</span><div><b>Approval maker</b><p>Build &amp; sign <code>approveBuilderFee</code>, SDK snippets</p></div><i>→</i></a>
+          <a href="#order"><span class="num">03</span><div><b>Order tagger</b><p>Add <code>builder: {b, f}</code>, action hash, agent signing</p></div><i>→</i></a>
+          <a href="#inspect"><span class="num">04</span><div><b>Signature inspector</b><p>Recover the real signer from a failing request</p></div><i>→</i></a>
+          <a href="#query"><span class="num">05</span><div><b>Info query builder</b><p>maxBuilderFee, account, referral; decode responses</p></div><i>→</i></a>
+          <a href="#fills"><span class="num">06</span><div><b>Fills analyzer</b><p>Dataset URLs, decode <code>.csv.lz4</code>, revenue breakdown</p></div><i>→</i></a>
+          <a href="#preflight"><span class="num">07</span><div><b>Preflight checklist</b><p>Launch requirements, saved in this browser</p></div><i>→</i></a>
+        </div>
+      </div>
+      <div class="card mt">
+        <h3>Lifecycle</h3>
+        <ol class="life">
+          <li><b>User approves</b> max fee once · main wallet · <code>approveBuilderFee</code></li>
+          <li><b>App tags orders</b> with <code>builder: {b, f}</code> · agent wallet can sign</li>
+          <li><b>Fee charged on fill</b> onchain, on the user's fill notional</li>
+          <li><b>Builder claims</b> via referral rewards · tracks via fills dataset</li>
+        </ol>
+      </div>
+    </div>
+    <div class="card pad0">
+      <h3 class="cardhead">Quick reference</h3>
+      <div class="ref">
+        <div><span>Info API</span><code id="ref0">https://api.hyperliquid.xyz/info</code><button class="btn ghost sm" data-copy="ref0">copy</button></div>
+        <div><span>Exchange API</span><code id="ref1">https://api.hyperliquid.xyz/exchange</code><button class="btn ghost sm" data-copy="ref1">copy</button></div>
+        <div><span>Testnet host</span><code id="ref2">https://api.hyperliquid-testnet.xyz</code><button class="btn ghost sm" data-copy="ref2">copy</button></div>
+        <div><span>f unit</span><code id="ref3">tenths of a bp · 10 = 1 bp = 0.01%</code><button class="btn ghost sm" data-copy="ref3">copy</button></div>
+        <div><span>Perps cap</span><code id="ref4">f ≤ 100 · 0.1%</code><button class="btn ghost sm" data-copy="ref4">copy</button></div>
+        <div><span>Spot cap</span><code id="ref5">f ≤ 1000 · 1% · not charged on spot buys</code><button class="btn ghost sm" data-copy="ref5">copy</button></div>
+        <div><span>Builder minimum</span><code id="ref6">100 USDC perps account value · standard abstraction mode</code><button class="btn ghost sm" data-copy="ref6">copy</button></div>
+        <div><span>Approvals</span><code id="ref7">main wallet signs · max 10 active per user · "0%" revokes</code><button class="btn ghost sm" data-copy="ref7">copy</button></div>
+        <div><span>Order field</span><code id="ref8">"builder": {"b": "0x…lowercase", "f": 50}</code><button class="btn ghost sm" data-copy="ref8">copy</button></div>
+        <div><span>Approval check</span><code id="ref9">{"type": "maxBuilderFee", "user": "0x…", "builder": "0x…"}</code><button class="btn ghost sm" data-copy="ref9">copy</button></div>
+        <div><span>Fees collected</span><code id="ref10">{"type": "referral", "user": "&lt;builder&gt;"} · claim via referral rewards</code><button class="btn ghost sm" data-copy="ref10">copy</button></div>
+        <div><span>Fills dataset</span><code id="ref11">https://stats-data.hyperliquid.xyz/Mainnet/builder_fills/{builder}/{YYYYMMDD}.csv.lz4</code><button class="btn ghost sm" data-copy="ref11">copy</button></div>
+        <div><span>Approve domain</span><code id="ref12">HyperliquidSignTransaction · v1 · chainId = signatureChainId</code><button class="btn ghost sm" data-copy="ref12">copy</button></div>
+        <div><span>Order domain</span><code id="ref13">Exchange · v1 · chainId 1337 · Agent{source a|b, connectionId}</code><button class="btn ghost sm" data-copy="ref13">copy</button></div>
+      </div>
+    </div>
   </div>
 </section>
 
