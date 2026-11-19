@@ -14,11 +14,19 @@ Everything runs client-side in a single static HTML file: EIP-712 signing, msgpa
 |---|------|--------------|
 | 01 | **Fee calculator** | `f` (tenths of a bp) ↔ bps ↔ %, perps/spot cap checks, revenue model from routed volume |
 | 02 | **Approval maker** | Builds and signs `approveBuilderFee`: action, EIP-712 v4 typed data, digest, `/exchange` body, TS + Python snippets. Sign with an ephemeral test key or an injected wallet |
-| 03 | **Order tagger** | Attaches `builder: {b, f}` to an order action, computes the L1 action hash and phantom agent, and validates against caps, the user's approval and the spot-buy rule |
+| 03 | **Order tagger** | Attaches `builder: {b, f}` to an order action, computes the L1 action hash and phantom agent, and validates against caps, the user's approval, the spot-buy rule, and each market's tick/lot size. Includes an asset-id lookup (live from the Info API) and a time-in-force reference |
 | 04 | **Signature inspector** | Paste a failing `/exchange` body to recover the real signer. Aimed at `User or API Wallet … does not exist` |
 | 05 | **Info query builder** | `maxBuilderFee`, `clearinghouseState` (≥ 100 USDC check), `referral`, `userFills`. Generates curl/fetch/Python and decodes pasted responses |
 | 06 | **Fills analyzer** | Generates `builder_fills` dataset URLs + download script, then decodes dropped `.csv.lz4` files into revenue, users, markets and hourly fees |
 | 07 | **Preflight checklist** | Every requirement between you and your first builder fee |
+
+## Known builder presets
+
+Pick a well-known builder from the workspace bar (Phantom, MetaMask, fomo, Based, Trust Wallet, Rabby and more) to check a user's approval for it, analyze its public fills dataset, or use it as a reference. Addresses come from [DefiLlama's open-source adapters](https://github.com/DefiLlama/dimension-adapters/blob/master/factory/hyperliquid.ts); fees are shown only where publicly reported.
+
+## Live data
+
+Hosted on GitHub Pages, the site calls `api.hyperliquid.xyz/info` directly from the browser for the asset list (`meta`, `spotMeta`). If that's unavailable it falls back to a bundled list of perp ids verified against the Python SDK's test fixtures.
 
 ## Correctness
 
