@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BuilderKit — Hyperliquid Builder Code Toolkit</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%20width%3D%2264%22%20height%3D%2264%22%3E%20%20%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2215%22%20fill%3D%22%23b6ff4d%22/%3E%20%20%3Cpath%20fill%3D%22%230a0c0b%22%20fill-rule%3D%22evenodd%22%20d%3D%22M12%2011h9v14h13a8%208%200%200%201%208%208v12a8%208%200%200%201-8%208H12zM21%2033v12h12V33z%22/%3E%20%20%3Crect%20class%3D%22cur%22%20x%3D%2244%22%20y%3D%2248%22%20width%3D%2212%22%20height%3D%225%22%20rx%3D%221%22%20fill%3D%22%230a0c0b%22/%3E%3C/svg%3E">
+<meta name="description" content="Dev toolkit for Hyperliquid builder codes: fee calculator, approval and order signing, signature inspector, fills analyzer.">
+<meta property="og:title" content="BuilderKit — Hyperliquid Builder Code Toolkit">
+<meta property="og:description" content="Ship builder codes without the signature guesswork. Calculators, payload makers and debuggers. Runs fully in your browser.">
+<meta property="og:image" content="https://andrewdamelio.github.io/builderkit/assets/og.png">
+<meta property="og:url" content="https://andrewdamelio.github.io/builderkit/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0a0c0b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@msgpack/msgpack@2.8.0/dist.es5+umd/msgpack.min.js"></script>
+<style>
+:root{
+  --bg:#0a0c0b; --bg2:#101413; --panel:#131817; --line:#222a28; --line2:#2d3734;
+  --ink:#e9ede6; --dim:#93a09a; --mute:#5f6b66;
+  --acc:#b6ff4d; --acc2:#79e0c0; --warn:#ffb547; --err:#ff6b5e; --info:#7cb8ff;
+  --mono:'JetBrains Mono',ui-monospace,monospace; --sans:'Instrument Sans',system-ui,sans-serif;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{background-image:radial-gradient(circle at 1px 1px,#1a201e 1px,transparent 0);background-size:22px 22px}
+a{color:var(--acc2)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 18px}
+header.top{padding:22px 0 8px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.logo{width:32px;height:32px;display:block;flex-shrink:0}
+.logo .cur{animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.logo .cur{animation:none}}
+.brand b{font-weight:700;letter-spacing:-.01em;font-size:17px}
+.brand span{white-space:nowrap;color:var(--mute);font-family:var(--mono);font-size:12px}
+.tag{font-family:var(--mono);font-size:11px;color:var(--dim);border:1px solid var(--line2);padding:3px 8px;border-radius:99px;white-space:nowrap}
+.hero{padding:34px 0 20px}
+.hero h1{font-size:clamp(30px,6vw,54px);line-height:1.02;letter-spacing:-.035em;margin:0 0 14px;font-weight:700;max-width:16ch}
+.hero h1 em{font-style:normal;color:var(--acc)}
+.hero p{color:var(--dim);max-width:60ch;margin:0;font-size:16px}
+.kicker{font-family:var(--mono);font-size:12px;color:var(--acc);letter-spacing:.08em;text-transform:uppercase;margin-bottom:14px}
+/* workspace */
+.ws{position:sticky;top:0;z-index:20;background:rgba(10,12,11,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.ws-row{display:flex;gap:10px;align-items:center;padding:10px 0;flex-wrap:wrap}
+.ws-row label{font-family:var(--mono);font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.06em}
+.ws-field{display:flex;align-items:center;gap:8px;flex:1;min-width:240px}
+.ws-field input{flex:1}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs a{font-family:var(--mono);font-size:12.5px;color:var(--dim);text-decoration:none;padding:7px 11px;border-radius:7px;white-space:nowrap;border:1px solid transparent}
+nav.tabs a:hover{color:var(--ink);background:var(--bg2)}
+nav.tabs a.on{color:#0a0c0b;background:var(--acc);font-weight:700}
+/* inputs */
+input,select,textarea{font-family:var(--mono);font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line2);border-radius:8px;padding:9px 11px;width:100%;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--acc)}
+input.bad{border-color:var(--err)}
+textarea{min-height:170px;resize:vertical;line-height:1.45}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden;flex-shrink:0}
+.seg button{background:transparent;border:0;color:var(--dim);font-family:var(--mono);font-size:12px;padding:8px 11px;cursor:pointer}
+.seg button.on{background:var(--line2);color:var(--ink)}
+.btn{font-family:var(--mono);font-size:12.5px;font-weight:700;background:var(--acc);color:#0a0c0b;border:0;border-radius:8px;padding:10px 14px;cursor:pointer;white-space:nowrap}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line2);font-weight:500}
+.btn.ghost:hover{border-color:var(--dim)}
+.btn.sm{padding:6px 10px;font-size:11.5px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+/* layout */
+main{padding:26px 0 60px}
+section.view{display:none}
+section.view.on{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.vh{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.vh h2{margin:0;font-size:26px;letter-spacing:-.02em}
+.vh p{margin:4px 0 0;color:var(--dim);max-width:62ch}
+.num{font-family:var(--mono);color:var(--mute);font-size:12px}
+.grid{display:grid;gap:14px}
+.grid>*,.card,.code{min-width:0}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:820px){.g2,.g3{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.card h3{margin:0 0 12px;font-size:13px;font-family:var(--mono);font-weight:500;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.f{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.f>span{font-size:12px;color:var(--dim)}
+.f small{color:var(--mute);font-size:11.5px}
+.row{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.row>.btn{margin-top:22px}
+.row:not(:has(.f))>.btn{margin-top:0}
+.row>.f{flex:1;min-width:120px}
+/* tool cards on home */
+.tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-top:26px}
+.tool{display:block;text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;transition:border-color .15s,transform .15s}
+.tool:hover{border-color:var(--acc);transform:translateY(-2px)}
+.tool .num{display:block;margin-bottom:18px}
+.tool b{display:block;font-size:17px;margin-bottom:4px;letter-spacing:-.01em}
+.tool p{margin:0;color:var(--dim);font-size:13.5px}
+.flow{margin-top:30px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.flow div{padding:14px;border-right:1px solid var(--line);background:var(--bg2)}
+.flow div:last-child{border-right:0}
+.flow i{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--acc)}
+.flow b{display:block;font-size:14px;margin:4px 0 2px}
+.flow span{font-size:12.5px;color:var(--dim)}
+@media(max-width:820px){.flow{grid-template-columns:1fr 1fr}.flow div:nth-child(2){border-right:0}.flow div:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+/* stats */
+.stat{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:12px}
+.stat span{display:block;font-family:var(--mono);font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
+.stat b{display:block;font-family:var(--mono);font-size:20px;margin-top:4px;letter-spacing:-.02em;word-break:break-all}
+.stat b.acc{color:var(--acc)}
+/* code */
+.code{position:relative;background:#070908;border:1px solid var(--line);border-radius:8px;margin:0}
+.code pre{margin:0;padding:12px 14px;overflow:auto;font-family:var(--mono);font-size:12px;line-height:1.55;max-height:420px;color:#cfd8d2;white-space:pre}
+.code .cp{position:absolute;top:7px;right:7px;opacity:.85}
+.k{color:var(--acc2)} .s{color:#e7d48a} .n{color:#ff9e7a} .b{color:#c99bff} .c{color:var(--mute)}
+.subtabs{display:flex;gap:2px;margin-bottom:8px;flex-wrap:wrap}
+.subtabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--mute);font-family:var(--mono);font-size:12px;padding:6px 8px;cursor:pointer}
+.subtabs button.on{color:var(--ink);border-color:var(--acc)}
+/* notes */
+.note{display:flex;gap:9px;padding:9px 11px;border-radius:8px;font-size:13px;margin-bottom:8px;border:1px solid}
+.note::before{font-family:var(--mono);font-weight:700;font-size:11px;padding-top:2px}
+.note.ok{border-color:#2f4a1a;background:#121a0b;color:#d5f5b0}.note.ok::before{content:"OK";color:var(--acc)}
+.note.warn{border-color:#4a3713;background:#1a140a;color:#ffe2b0}.note.warn::before{content:"WARN";color:var(--warn)}
+.note.err{border-color:#4d1f1a;background:#1c0d0b;color:#ffc9c2}.note.err::before{content:"ERR";color:var(--err)}
+.note.info{border-color:#1e3350;background:#0c1420;color:#cfe3ff}.note.info::before{content:"INFO";color:var(--info)}
+.pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 7px;border-radius:99px;border:1px solid var(--line2);color:var(--dim)}
+.pill.acc{border-color:var(--acc);color:var(--acc)}
+.addr{font-family:var(--mono);font-size:12.5px;word-break:break-all}
+table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12.5px}
+th{text-align:left;color:var(--mute);font-weight:500;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:7px 8px;border-bottom:1px solid var(--line);word-break:break-all}
+td.r,th.r{text-align:right}
+input[type=range]{padding:0;border:0;accent-color:var(--acc);background:transparent}
+.drop{border:1.5px dashed var(--line2);border-radius:var(--r);padding:26px;text-align:center;color:var(--dim);cursor:pointer;transition:all .15s}
+.drop.hot,.drop:hover{border-color:var(--acc);color:var(--ink);background:#0f140c}
+.check{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.check:last-child{border-bottom:0}
+.check input{width:18px;height:18px;flex-shrink:0;margin-top:2px;accent-color:var(--acc)}
+.check b{display:block;font-size:14.5px}
+.check p{margin:2px 0 0;color:var(--dim);font-size:13px}
+.check.done b{color:var(--mute);text-decoration:line-through}
+.bar{height:6px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--acc);transition:width .3s}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--acc);color:#0a0c0b;font-family:var(--mono);font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:8px;transition:transform .2s,opacity .2s;z-index:50;opacity:0;pointer-events:none}
+.toast.on{transform:translateX(-50%) translateY(0);opacity:1}
+footer{border-top:1px solid var(--line);padding:22px 0 40px;color:var(--mute);font-size:13px}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.hide{display:none!important}
+.mt{margin-top:14px}
+.sp{height:8px}
+svg text{font-family:var(--mono)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#home"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="32" height="32" class="logo" aria-hidden="true">
+  <rect width="64" height="64" rx="15" fill="#b6ff4d"/>
+  <path fill="#0a0c0b" fill-rule="evenodd" d="M12 11h9v14h13a8 8 0 0 1 8 8v12a8 8 0 0 1-8 8H12zM21 33v12h12V33z"/>
+  <rect class="cur" x="44" y="48" width="12" height="5" rx="1" fill="#0a0c0b"/>
+</svg><div><b>BuilderKit</b> <span>/ hyperliquid</span></div></a>
+    <span class="tag" id="libstatus">● loading libs</span>
+  </header>
+</div>
+
+<div class="ws">
+  <div class="wrap">
+    <div class="ws-row">
+      <div class="ws-field"><label for="wsBuilder">Builder</label><input id="wsBuilder" placeholder="0x… your builder address" spellcheck="false" autocomplete="off"></div>
+      <div class="seg" id="wsNet"><button data-v="main" class="on">Mainnet</button><button data-v="test">Testnet</button></div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <a href="#home">~/home</a>
+      <a href="#fees">01 fees</a>
+      <a href="#approve">02 approve</a>
+      <a href="#order">03 order</a>
+      <a href="#inspect">04 inspect</a>
+      <a href="#query">05 query</a>
+      <a href="#fills">06 fills</a>
+      <a href="#preflight">07 preflight</a>
+    </nav>
+  </div>
+</div>
+
+<main class="wrap">
+
+<!-- HOME -->
+<section class="view" id="v-home">
+  <div class="hero">
+    <div class="kicker">Builder codes · dev toolkit</div>
+    <h1>Ship builder codes <em>without</em> the signature guesswork.</h1>
+    <p>Calculators, payload makers and debuggers for Hyperliquid builder codes. Everything runs in your browser: EIP-712 signing, msgpack action hashing and LZ4 fills decoding, all checked against the official Python SDK.</p>
+  </div>
+  <div class="flow">
+    <div><i>01 · USER</i><b>Approve max fee</b><span>Main wallet signs <code>approveBuilderFee</code></span></div>
+    <div><i>02 · APP</i><b>Tag orders</b><span><code>builder: {b, f}</code> on each order action</span></div>
+    <div><i>03 · CHAIN</i><b>Fee on fill</b><span>Charged onchain as part of the fee logic</span></div>
+    <div><i>04 · BUILDER</i><b>Claim &amp; track</b><span>Referral rewards claim + fills dataset</span></div>
+  </div>
+  <div class="tools">
+    <a class="tool" href="#fees"><span class="num">01</span><b>Fee calculator</b><p>Convert f ↔ bps ↔ %, check caps, model revenue against routed volume.</p></a>
+    <a class="tool" href="#approve"><span class="num">02</span><b>Approval maker</b><p>Build and sign <code>approveBuilderFee</code>: typed data, hash, exchange body, SDK snippets.</p></a>
+    <a class="tool" href="#order"><span class="num">03</span><b>Order tagger</b><p>Attach a builder code to an order, compute the action hash, sign as an agent.</p></a>
+    <a class="tool" href="#inspect"><span class="num">04</span><b>Signature inspector</b><p>Paste a failing /exchange body. Recover the signer and see what's wrong.</p></a>
+    <a class="tool" href="#query"><span class="num">05</span><b>Info query builder</b><p>Generate maxBuilderFee / referral / account checks, then paste the response to decode it.</p></a>
+    <a class="tool" href="#fills"><span class="num">06</span><b>Fills analyzer</b><p>Generate dataset URLs, drop a <code>.csv.lz4</code>, get revenue, users and markets.</p></a>
+    <a class="tool" href="#preflight"><span class="num">07</span><b>Preflight checklist</b><p>Every requirement between you and your first builder fee.</p></a>
+  </div>
+</section>
+
+<!-- FEES -->
+<section class="view" id="v-fees">
+  <div class="vh"><div><span class="num">01 / fees</span><h2>Fee calculator</h2><p>Order fees use <code>f</code> in tenths of a basis point. <code>f = 10</code> is 1 bp, or 0.01%. Caps: 0.1% on perps (f ≤ 100), 1% on spot (f ≤ 1000).</p></div></div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Converter <div class="seg" id="feeMkt"><button data-v="perp" class="on">perp</button><button data-v="spot">spot</button></div></h3>
+      <div class="row">
+        <label class="f"><span>f (tenths of bp)</span><input id="feeF" type="number" min="0" step="1" value="25"></label>
+        <label class="f"><span>basis points</span><input id="feeBps" type="number" min="0" step="0.1" value="2.5"></label>
+        <label class="f"><span>percent</span><input id="feePct" type="number" min="0" step="0.001" value="0.025"></label>
+      </div>
+      <input id="feeRange" type="range" min="0" max="100" value="25">
+      <div class="grid g2 mt">
+        <div class="stat"><span>maxFeeRate string</span><b class="acc" id="feeStr">0.025%</b></div>
+        <div class="stat"><span>fee on $10k fill</span><b id="fee10k">$2.50</b></div>
+      </div>
+      <div class="mt" id="feeNotes"></div>
+    </div>
+    <div class="card">
+      <h3>Revenue model</h3>
+      <div class="row">
+        <label class="f"><span>Daily routed notional ($)</span><input id="revVol" type="number" value="2500000" step="100000"></label>
+        <label class="f"><span>Effective f</span><input id="revF" type="number" value="25" step="1"></label>
+      </div>
+      <div class="grid g3">
+        <div class="stat"><span>per day</span><b id="revD">—</b></div>
+        <div class="stat"><span>per 30d</span><b id="revM">—</b></div>
+        <div class="stat"><span>per year</span><b class="acc" id="revY">—</b></div>
+      </div>
+      <div class="sp"></div>
+      <div class="row mt">
+        <label class="f"><span>Target monthly revenue ($)</span><input id="revTarget" type="number" value="50000" step="1000"></label>
+      </div>
+      <div class="stat"><span>daily notional needed at this f</span><b id="revNeed">—</b></div>
+      <p class="num mt">Fee is charged on each user fill's notional. Builder fees apply to both sides of perp trades but not the buying side of spot trades. Spot buys earn $0.</p>
+    </div>
+  </div>
+  <div class="card mt">
+    <h3>Reference table</h3>
+    <div style="overflow-x:auto"><table id="feeTable"><thead><tr><th>f</th><th>bps</th><th>%</th><th>maxFeeRate</th><th class="r">per $100k</th><th>valid on</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</section>
+
+<!-- APPROVE -->
+<section class="view" id="v-approve">
+  <div class="vh"><div><span class="num">02 / approve</span><h2>Approval maker</h2><p>Users approve a max fee for your builder address once. The <code>ApproveBuilderFee</code> action must be signed by the user's <b>main wallet</b>, not an agent/API wallet. To revoke, approve <code>"0%"</code>.</p></div></div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Parameters</h3>
+      <label class="f"><span>Builder address</span><input id="apBuilder" spellcheck="false" placeholder="uses workspace builder"><small>Lowercased in the action.</small></label>
+      <div class="row">
+        <label class="f"><span>maxFeeRate</span><input id="apRate" value="0.05%"></label>
+        <label class="f"><span>signatureChainId</span><select id="apChain"><option value="0x66eee">0x66eee · Arbitrum Sepolia (SDK default)</option><option value="0xa4b1">0xa4b1 · Arbitrum One</option><option value="0x1">0x1 · Ethereum</option></select></label>
+      </div>
+      <div class="row">
+        <label class="f"><span>nonce (ms timestamp)</span><input id="apNonce"></label>
+        <button class="btn ghost" id="apNow">now</button>
+      </div>
+      <div id="apNotes"></div>
+      <div class="row mt">
+        <button class="btn" id="apSignTest">Sign with test key</button>
+        <button class="btn ghost" id="apSignWallet">Sign with wallet</button>
+      </div>
+      <p class="num mt">The test key is generated in memory each session and never funded. Use it to test your submit pipeline end to end. Injected-wallet signing uses your wallet's active chain as <code>signatureChainId</code>.</p>
+    </div>
+    <div class="card">
+      <h3>Output <span class="pill" id="apHashPill">hash —</span></h3>
+      <div class="subtabs" data-for="apOut"><button data-k="action" class="on">action</button><button data-k="typed">eip-712 v4</button><button data-k="body">exchange body</button><button data-k="ts">typescript</button><button data-k="py">python</button></div>
+      <div class="code"><button class="btn ghost sm cp" data-copy="apOut">copy</button><pre id="apOut"></pre></div>
+      <div id="apSigned" class="mt"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ORDER -->
+<section class="view" id="v-order">
+  <div class="vh"><div><span class="num">03 / order</span><h2>Order tagger</h2><p>Attach <code>builder: {"b": address, "f": number}</code> to an order action. Orders are L1 actions: msgpack(action) + nonce + vault flag → keccak → phantom agent, signed by the user or their agent wallet.</p></div></div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Order <div class="seg" id="odMkt"><button data-v="perp" class="on">perp</button><button data-v="spot">spot</button></div></h3>
+      <div class="row">
+        <label class="f"><span>asset index</span><input id="odAsset" type="number" value="0"><small id="odAssetHint">perp: index in meta.universe (0 = BTC)</small></label>
+        <label class="f"><span>side</span><select id="odSide"><option value="1">buy / long</option><option value="0">sell / short</option></select></label>
+      </div>
+      <div class="row">
+        <label class="f"><span>limit px</span><input id="odPx" value="95123.5"></label>
+        <label class="f"><span>size</span><input id="odSz" value="0.0015"></label>
+        <label class="f"><span>tif</span><select id="odTif"><option>Gtc</option><option>Ioc</option><option>Alo</option></select></label>
+      </div>
+      <div class="row">
+        <label class="f"><span>builder f</span><input id="odF" type="number" value="25"></label>
+        <label class="f"><span>user's approved max f</span><input id="odMax" type="number" value="50"><small>from maxBuilderFee</small></label>
+        <label class="f"><span>reduce only</span><select id="odRo"><option value="0">no</option><option value="1">yes</option></select></label>
+      </div>
+      <div class="row"><label class="f"><span>nonce</span><input id="odNonce"></label><button class="btn ghost" id="odNow">now</button></div>
+      <div id="odNotes"></div>
+      <div class="row mt"><button class="btn" id="odSign">Sign with test key</button></div>
+    </div>
+    <div class="card">
+      <h3>Output <span class="pill" id="odHashPill">action hash —</span></h3>
+      <div class="subtabs" data-for="odOut"><button data-k="action" class="on">action</button><button data-k="agent">phantom agent</button><button data-k="body">exchange body</button><button data-k="ts">typescript</button><button data-k="py">python</button></div>
+      <div class="code"><button class="btn ghost sm cp" data-copy="odOut">copy</button><pre id="odOut"></pre></div>
+      <div id="odSigned" class="mt"></div>
+    </div>
+  </div>
+</section>
+
+<!-- INSPECT -->
+<section class="view" id="v-inspect">
+  <div class="vh"><div><span class="num">04 / inspect</span><h2>Signature inspector</h2><p>Getting <i>"User or API Wallet … does not exist"</i>? That means the recovered signer isn't who you think. Paste the exact JSON you POST to <code>/exchange</code> to see who actually signed it.</p></div></div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Exchange body <span><button class="btn ghost sm" id="inExA">example: approve</button> <button class="btn ghost sm" id="inExO">example: order</button></span></h3>
+      <textarea id="inBody" spellcheck="false" placeholder='{"action": {...}, "nonce": 1731900000000, "signature": {"r": "0x…", "s": "0x…", "v": 27}}'></textarea>
+      <div class="row mt">
+        <label class="f"><span>Expected signer (optional)</span><input id="inExpect" placeholder="0x… user or agent address" spellcheck="false"></label>
+        <button class="btn" id="inRun">Inspect</button>
+      </div>
+      <p class="num">L1 actions use the workspace network to pick source "a" / "b". Wrong network gives a different signer.</p>
+    </div>
+    <div class="card">
+      <h3>Result</h3>
+      <div id="inOut"><p class="num">Waiting for input.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- QUERY -->
+<section class="view" id="v-query">
+  <div class="vh"><div><span class="num">05 / query</span><h2>Info query builder</h2><p>Generate ready-to-run requests for <code>POST /info</code>, then paste the response back to have it decoded against builder-code rules.</p></div></div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Request</h3>
+      <label class="f"><span>Query</span><select id="qType">
+        <option value="maxBuilderFee">maxBuilderFee: what has a user approved?</option>
+        <option value="clearinghouseState">clearinghouseState: builder ≥ 100 USDC?</option>
+        <option value="referral">referral: builder fees collected</option>
+        <option value="userFills">userFills: fills with builderFee</option>
+      </select></label>
+      <label class="f" id="qUserWrap"><span>User address</span><input id="qUser" placeholder="0x…" spellcheck="false"></label>
+      <div class="subtabs" data-for="qOut"><button data-k="curl" class="on">curl</button><button data-k="fetch">fetch</button><button data-k="py">python</button><button data-k="json">json</button></div>
+      <div class="code"><button class="btn ghost sm cp" data-copy="qOut">copy</button><pre id="qOut"></pre></div>
+    </div>
+    <div class="card">
+      <h3>Decode response</h3>
+      <textarea id="qResp" spellcheck="false" placeholder="Paste the raw response here…" style="min-height:140px"></textarea>
+      <div class="mt" id="qDecoded"><p class="num">Paste a response to decode it.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- FILLS -->
+<section class="view" id="v-fills">
+  <div class="vh"><div><span class="num">06 / fills</span><h2>Fills analyzer</h2><p>Hyperliquid publishes builder-attributed trades daily as LZ4-compressed CSVs. Generate the URLs (case-sensitive, address lowercased), download, then drop the file here. It decodes locally.</p></div></div>
+  <div class="grid g2">
+    <div class="card">
+      <h3>Dataset URLs</h3>
+      <div class="row">
+        <label class="f"><span>from</span><input id="flFrom" type="date"></label>
+        <label class="f"><span>to</span><input id="flTo" type="date"></label>
+      </div>
+      <div class="subtabs" data-for="flOut"><button data-k="urls" class="on">urls</button><button data-k="sh">bash script</button></div>
+      <div class="code"><button class="btn ghost sm cp" data-copy="flOut">copy</button><pre id="flOut"></pre></div>
+    </div>
+    <div class="card">
+      <h3>Analyze <button class="btn ghost sm" id="flSample">load sample data</button></h3>
+      <div class="drop" id="flDrop"><b>Drop .csv.lz4 or .csv</b><br><span class="num">or tap to choose · nothing leaves your browser</span><input type="file" id="flFile" accept=".lz4,.csv,text/csv" class="hide" multiple></div>
+      <div id="flMeta" class="mt"></div>
+    </div>
+  </div>
+  <div id="flResults" class="hide">
+    <div class="grid g4 mt" id="flKpis"></div>
+    <div class="card mt"><h3>Builder fees by hour (UTC) <span class="pill" id="flSrc"></span></h3><div id="flChart"></div></div>
+    <div class="grid g2 mt">
+      <div class="card"><h3>Top markets</h3><div style="overflow-x:auto"><table id="flCoins"></table></div></div>
+      <div class="card"><h3>Top users</h3><div style="overflow-x:auto"><table id="flUsers"></table></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PREFLIGHT -->
+<section class="view" id="v-preflight">
+  <div class="vh"><div><span class="num">07 / preflight</span><h2>Preflight checklist</h2><p>Everything that has to be true before your first builder fee lands. Progress is saved in this browser.</p></div><div style="min-width:200px"><div class="num" id="pfCount">0 / 0</div><div class="bar"><i id="pfBar" style="width:0"></i></div></div></div>
+  <div class="card" id="pfList"></div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div>BuilderKit is an independent dev tool, not affiliated with Hyperliquid. Verify against the <a href="https://hyperliquid.gitbook.io/hyperliquid-docs/trading/builder-codes">official docs</a> before shipping.</div>
+    <div>Built by <a href="https://andrewdamel.io">Andy D'Amelio</a> · <a href="https://github.com/andrewdamelio">github</a></div>
+  </div>
+</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+// BuilderKit core — pure functions. Needs globals: ethers (v6), MessagePack (@msgpack/msgpack).
+const HL = (() => {
+  const ZERO = "0x0000000000000000000000000000000000000000";
+  const LIMITS = { perp: 100, spot: 1000 }; // max f (tenths of a bp): 0.1% perps, 1% spot
+
+  // ---------- fee units ----------
+  // f is in tenths of a basis point. 1 bp = 0.01%, so f=10 -> 0.01%, f=1 -> 0.001%
+  const fToPct = (f) => Number(f) / 1000;               // percent number
+  const fToBps = (f) => Number(f) / 10;
+  const pctToF = (pct) => Math.round(Number(pct) * 1000);
+  const fToRateString = (f) => {                        // "0.05%" style string for maxFeeRate
+    let s = (Number(f) / 1000).toFixed(3).replace(/\.?0+$/, "");
+    return s + "%";
+  };
+  const parseRateString = (s) => {
+    const m = String(s).trim().match(/^(\d+(?:\.\d+)?)%$/);
+    if (!m) throw new Error('maxFeeRate must look like "0.1%"');
+    const f = Number(m[1]) * 1000;
+    if (Math.abs(f - Math.round(f)) > 1e-9) throw new Error("maxFeeRate finer than 0.001% (f must be an integer)");
+    return Math.round(f);
+  };
+
+  // ---------- wire formatting (matches hyperliquid-python-sdk float_to_wire) ----------
+  function floatToWire(x) {
+    const n = Number(x);
+    if (!isFinite(n)) throw new Error("not a number: " + x);
+    let s = n.toFixed(8);
+    if (Math.abs(Number(s) - n) >= 1e-12) throw new Error("float_to_wire causes rounding: " + x);
+    s = s.replace(/\.?0+$/, "");
+    if (s === "-0" || s === "") s = "0";
+    return s;
+  }
+
+  const isAddr = (a) => /^0x[0-9a-fA-F]{40}$/.test(String(a || "").trim());
+
+  // ---------- user-signed action: ApproveBuilderFee ----------
+  const APPROVE_TYPES = {
+    "HyperliquidTransaction:ApproveBuilderFee": [
+      { name: "hyperliquidChain", type: "string" },
+      { name: "maxFeeRate", type: "string" },
+      { name: "builder", type: "address" },
+      { name: "nonce", type: "uint64" },
+    ],
+  };
+  const APPROVE_PRIMARY = "HyperliquidTransaction:ApproveBuilderFee";
+
+  function buildApproveAction({ builder, maxFeeRate, nonce, mainnet = true, signatureChainId = "0x66eee" }) {
+    if (!isAddr(builder)) throw new Error("builder must be a 0x address");
+    parseRateString(maxFeeRate);
+    return {
+      type: "approveBuilderFee",
+      signatureChainId,
+      hyperliquidChain: mainnet ? "Mainnet" : "Testnet",
+      maxFeeRate,
+      builder: builder.trim().toLowerCase(),
+      nonce: Number(nonce),
+    };
+  }
+  function approveTypedData(action) {
+    const domain = {
+      name: "HyperliquidSignTransaction",
+      version: "1",
+      chainId: parseInt(action.signatureChainId, 16),
+      verifyingContract: ZERO,
+    };
+    const message = {
+      hyperliquidChain: action.hyperliquidChain,
+      maxFeeRate: action.maxFeeRate,
+      builder: action.builder,
+      nonce: action.nonce,
+    };
+    return { domain, types: APPROVE_TYPES, primaryType: APPROVE_PRIMARY, message };
+  }
+  // Full JSON for eth_signTypedData_v4
+  function toV4(td) {
+    return {
+      domain: td.domain,
+      types: {
+        EIP712Domain: [
+          { name: "name", type: "string" },
+          { name: "version", type: "string" },
+          { name: "chainId", type: "uint256" },
+          { name: "verifyingContract", type: "address" },
+        ],
+        ...td.types,
+      },
+      primaryType: td.primaryType,
+      message: td.message,
+    };
+  }
+  const typedHash = (td) => ethers.TypedDataEncoder.hash(td.domain, td.types, td.message);
+
+  // ---------- L1 action: order with builder ----------
+  function orderWire({ asset, isBuy, px, sz, reduceOnly = false, tif = "Gtc", cloid }) {
+    const w = {
+      a: Number(asset),
+      b: !!isBuy,
+      p: floatToWire(px),
+      s: floatToWire(sz),
+      r: !!reduceOnly,
+      t: { limit: { tif } },
+    };
+    if (cloid) w.c = cloid;
+    return w;
+  }
+  function buildOrderAction(orders, builder) {
+    const action = { type: "order", orders, grouping: "na" };
+    if (builder) action.builder = { b: builder.b.trim().toLowerCase(), f: Number(builder.f) };
+    return action;
+  }
+  function u64be(n) {
+    const out = new Uint8Array(8);
+    let v = BigInt(n);
+    for (let i = 7; i >= 0; i--) { out[i] = Number(v & 0xffn); v >>= 8n; }
+    return out;
+  }
+  function actionHash(action, nonce, vaultAddress = null, expiresAfter = null) {
+    const packed = MessagePack.encode(action);
+    const parts = [packed, u64be(nonce)];
+    if (!vaultAddress) parts.push(new Uint8Array([0]));
+    else parts.push(new Uint8Array([1]), ethers.getBytes(vaultAddress));
+    if (expiresAfter != null) parts.push(new Uint8Array([0]), u64be(expiresAfter));
+    return ethers.keccak256(ethers.concat(parts));
+  }
+  function l1TypedData(hash, mainnet = true) {
+    return {
+      domain: { name: "Exchange", version: "1", chainId: 1337, verifyingContract: ZERO },
+      types: { Agent: [{ name: "source", type: "string" }, { name: "connectionId", type: "bytes32" }] },
+      primaryType: "Agent",
+      message: { source: mainnet ? "a" : "b", connectionId: hash },
+    };
+  }
+
+  // ---------- signatures ----------
+  function splitSig(sig) {
+    const s = ethers.Signature.from(sig);
+    return { r: s.r, s: s.s, v: s.v };
+  }
+  async function signTyped(wallet, td) {
+    return splitSig(await wallet.signTypedData(td.domain, td.types, td.message));
+  }
+  function recover(td, sig) {
+    const joined = ethers.Signature.from({ r: sig.r, s: sig.s, v: Number(sig.v) }).serialized;
+    return ethers.verifyTypedData(td.domain, td.types, td.message, joined);
+  }
+
+  // Given a full /exchange body, rebuild what was signed and recover the signer.
+  function inspectExchangeBody(body, mainnetHint = true) {
+    const { action, nonce, signature } = body;
+    if (!action || !signature) throw new Error("Body needs action, nonce and signature");
+    const notes = [];
+    let td, kind;
+    if (action.type === "approveBuilderFee") {
+      kind = "User-signed · ApproveBuilderFee";
+      if (!action.signatureChainId) throw new Error("approveBuilderFee action is missing signatureChainId");
+      td = approveTypedData(action);
+      if (Number(action.nonce) !== Number(nonce)) notes.push({ lvl: "err", msg: "action.nonce ≠ body nonce — the exchange will reject this." });
+      try {
+        const f = parseRateString(action.maxFeeRate);
+        if (f > LIMITS.spot) notes.push({ lvl: "err", msg: `maxFeeRate ${action.maxFeeRate} exceeds the 1% ceiling.` });
+        else if (f > LIMITS.perp) notes.push({ lvl: "warn", msg: `maxFeeRate ${action.maxFeeRate} is above the 0.1% perps cap — only spot orders can use the full amount.` });
+      } catch (e) { notes.push({ lvl: "err", msg: e.message }); }
+    } else {
+      kind = "L1 action · " + action.type;
+      const mainnet = body.isMainnet ?? mainnetHint;
+      const h = actionHash(action, nonce, body.vaultAddress || null, body.expiresAfter ?? null);
+      td = l1TypedData(h, mainnet);
+      notes.push({ lvl: "info", msg: `Action hash ${h.slice(0, 10)}… on ${mainnet ? "mainnet (source a)" : "testnet (source b)"}. Key order in action matters — it is msgpack-hashed as-is.` });
+      if (action.builder) {
+        const f = Number(action.builder.f);
+        if (!Number.isInteger(f)) notes.push({ lvl: "err", msg: "builder.f must be an integer (tenths of a bp)." });
+        if (f > LIMITS.spot) notes.push({ lvl: "err", msg: `builder.f=${f} exceeds the 1% hard cap.` });
+        else if (f > LIMITS.perp) notes.push({ lvl: "warn", msg: `builder.f=${f} (${fToPct(f)}%) is over the perps cap of 0.1% — perp orders will be rejected.` });
+        if (action.builder.b !== String(action.builder.b).toLowerCase()) notes.push({ lvl: "warn", msg: "builder.b is not lowercase; the SDKs lowercase it before hashing." });
+      }
+    }
+    const signer = recover(td, signature);
+    return { kind, signer, typedHash: typedHash(td), notes, td };
+  }
+
+  // ---------- LZ4 frame decoder (for builder_fills .csv.lz4) ----------
+  function lz4Decode(input) {
+    const src = input instanceof Uint8Array ? input : new Uint8Array(input);
+    let out = new Uint8Array(Math.max(1024, src.length * 4));
+    let op = 0;
+    const ensure = (n) => {
+      if (op + n <= out.length) return;
+      let len = out.length * 2;
+      while (len < op + n) len *= 2;
+      const nb = new Uint8Array(len); nb.set(out.subarray(0, op)); out = nb;
+    };
+    const u32 = (i) => (src[i] | (src[i + 1] << 8) | (src[i + 2] << 16) | (src[i + 3] << 24)) >>> 0;
+    let ip = 0;
+    while (ip < src.length) {
+      const magic = u32(ip);
+      if ((magic & 0xfffffff0) === 0x184d2a50) { ip += 8 + u32(ip + 4); continue; } // skippable frame
+      if (magic !== 0x184d2204) throw new Error("Not an LZ4 frame (bad magic)");
+      ip += 4;
+      const flg = src[ip++]; ip++; // BD
+      const blockChecksum = flg & 0x10, contentSize = flg & 0x08, contentChecksum = flg & 0x04, dictId = flg & 0x01;
+      if (contentSize) ip += 8;
+      if (dictId) ip += 4;
+      ip++; // header checksum
+      for (;;) {
+        const bsz = u32(ip); ip += 4;
+        if (bsz === 0) break;
+        const size = bsz & 0x7fffffff;
+        if (bsz & 0x80000000) { ensure(size); out.set(src.subarray(ip, ip + size), op); op += size; ip += size; }
+        else {
+          const end = ip + size;
+          while (ip < end) {
+            const token = src[ip++];
+            let lit = token >> 4;
+            if (lit === 15) { let b; do { b = src[ip++]; lit += b; } while (b === 255); }
+            ensure(lit); out.set(src.subarray(ip, ip + lit), op); op += lit; ip += lit;
+            if (ip >= end) break;
+            const off = src[ip] | (src[ip + 1] << 8); ip += 2;
+            let ml = token & 15;
+            if (ml === 15) { let b; do { b = src[ip++]; ml += b; } while (b === 255); }
+            ml += 4;
+            if (off === 0 || off > op) throw new Error("Corrupt LZ4 block");
+            ensure(ml);
+            let m = op - off;
+            for (let k = 0; k < ml; k++) out[op++] = out[m++];
+          }
+          ip = end;
+        }
+        if (blockChecksum) ip += 4;
+      }
+      if (contentChecksum) ip += 4;
+    }
+    return out.subarray(0, op);
+  }
+
+  const fillsUrl = (builder, yyyymmdd, mainnet = true) =>
+    `https://stats-data.hyperliquid.xyz/${mainnet ? "Mainnet" : "Testnet"}/builder_fills/${builder.trim().toLowerCase()}/${yyyymmdd}.csv.lz4`;
+
+  return {
+    ZERO, LIMITS, fToPct, fToBps, pctToF, fToRateString, parseRateString, floatToWire, isAddr,
+    buildApproveAction, approveTypedData, toV4, typedHash, orderWire, buildOrderAction, actionHash,
+    l1TypedData, splitSig, signTyped, recover, inspectExchangeBody, lz4Decode, fillsUrl,
+  };
+})();
+
+
+</script>
+<script>
+(() => {
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("bk:" + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("bk:" + k, JSON.stringify(v)); } catch {} },
+};
+const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const usd = (n, d = 2) => (n < 0 ? "-$" : "$") + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d });
+const compact = (n) => "$" + Intl.NumberFormat(undefined, { notation: "compact", maximumFractionDigits: 2 }).format(n);
+const LIBS_OK = typeof ethers !== "undefined" && typeof MessagePack !== "undefined";
+$("#libstatus").textContent = LIBS_OK ? "● local · no server" : "● libs failed to load";
+$("#libstatus").style.color = LIBS_OK ? "var(--acc)" : "var(--err)";
+
+function toast(m) { const t = $("#toast"); t.textContent = m; t.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("on"), 1400); }
+function hl(json) {
+  return esc(json).replace(/("(?:\\.|[^"\\])*")(\s*:)?|\b(true|false|null)\b|(-?\d+(?:\.\d+)?)/g, (m, s, colon, b, n) => {
+    if (s) return colon ? `<span class="k">${s}</span>${colon}` : `<span class="s">${s}</span>`;
+    if (b) return `<span class="b">${b}</span>`;
+    return `<span class="n">${n}</span>`;
+  });
+}
+const J = (o) => JSON.stringify(o, null, 2);
+function setCode(id, text, lang = "json") {
+  const el = document.getElementById(id);
+  el.dataset.raw = text;
+  el.innerHTML = lang === "json" ? hl(text) : esc(text).replace(/(^|\n)(\s*(?:#|\/\/).*)/g, '$1<span class="c">$2</span>');
+}
+function note(lvl, msg) { return `<div class="note ${lvl}"><div>${msg}</div></div>`; }
+
+// copy buttons
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-copy]");
+  if (!b) return;
+  const el = document.getElementById(b.dataset.copy);
+  const raw = el.dataset.raw ?? el.textContent;
+  try { await navigator.clipboard.writeText(raw); toast("copied"); }
+  catch { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("selected — copy manually"); }
+});
+// segmented controls
+function seg(id, onChange) {
+  const el = document.getElementById(id);
+  el.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    $$("button", el).forEach((x) => x.classList.toggle("on", x === b));
+    onChange(b.dataset.v);
+  });
+  return () => $("button.on", el).dataset.v;
+}
+// subtabs
+const subState = {};
+function subtabs(forId, render) {
+  const el = $(`.subtabs[data-for="${forId}"]`);
+  subState[forId] = $("button.on", el).dataset.k;
+  el.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    $$("button", el).forEach((x) => x.classList.toggle("on", x === b));
+    subState[forId] = b.dataset.k; render();
+  });
+}
+
+// ---------- workspace ----------
+const WS = { builder: store.get("builder", ""), net: store.get("net", "main") };
+const wsB = $("#wsBuilder");
+wsB.value = WS.builder;
+$$("#wsNet button").forEach((b) => b.classList.toggle("on", b.dataset.v === WS.net));
+const isMain = () => WS.net === "main";
+const builderAddr = () => (HL.isAddr(WS.builder) ? WS.builder.trim() : "");
+const listeners = [];
+const onWs = (fn) => listeners.push(fn);
+wsB.addEventListener("input", () => {
+  WS.builder = wsB.value.trim(); store.set("builder", WS.builder);
+  wsB.classList.toggle("bad", !!WS.builder && !HL.isAddr(WS.builder));
+  listeners.forEach((f) => f());
+});
+seg("wsNet", (v) => { WS.net = v; store.set("net", v); listeners.forEach((f) => f()); });
+const DEMO_BUILDER = "0x1922810825c90f4270048b96da7b1803cd8609ef";
+const bOr = (v) => (HL.isAddr(v) ? v.trim() : builderAddr() || DEMO_BUILDER);
+
+// ---------- router ----------
+const VIEWS = ["home", "fees", "approve", "order", "inspect", "query", "fills", "preflight"];
+function route() {
+  const h = location.hash.replace("#", "");
+  const v = VIEWS.includes(h) ? h : "home";
+  $$("section.view").forEach((s) => s.classList.toggle("on", s.id === "v-" + v));
+  $$("#tabs a").forEach((a) => a.classList.toggle("on", a.getAttribute("href") === "#" + v));
+  const on = $("#tabs a.on"), nav = $("#tabs"); if (on) nav.scrollLeft = on.offsetLeft - nav.clientWidth / 2 + on.clientWidth / 2;
+}
+addEventListener("hashchange", () => { route(); scrollTo({ top: 0 }); });
+route();
+
+const safe = (f) => { try { f(); } catch (e) { console.error(e); } };
+// test wallet
+let testWallet = null;
+const getTestWallet = () => (testWallet ||= ethers.Wallet.createRandom());
+
+// =============== 01 FEES ===============
+safe(() => {
+  const F = $("#feeF"), B = $("#feeBps"), P = $("#feePct"), R = $("#feeRange");
+  let mkt = "perp";
+  function sync(f, src) {
+    f = Math.max(0, Math.round(Number(f) || 0));
+    if (src !== "f") F.value = f;
+    if (src !== "b") B.value = HL.fToBps(f);
+    if (src !== "p") P.value = HL.fToPct(f);
+    R.max = mkt === "perp" ? 100 : 1000; R.value = Math.min(f, R.max);
+    $("#feeStr").textContent = HL.fToRateString(f);
+    $("#fee10k").textContent = usd(10000 * HL.fToPct(f) / 100);
+    const lim = HL.LIMITS[mkt];
+    let n = "";
+    if (f > HL.LIMITS.spot) n = note("err", `f=${f} exceeds the 1% hard cap. Orders will be rejected.`);
+    else if (f > lim) n = note("err", `f=${f} is over the perps cap of 100 (0.1%). Only valid on spot.`);
+    else n = note("ok", `Valid on ${mkt}${mkt === "spot" ? " (sell side only — spot buys pay no builder fee)" : ""}. ${f}/${lim} of cap used.`);
+    if (Number(src === "b" ? B.value : src === "p" ? P.value : f) * (src === "b" ? 10 : src === "p" ? 1000 : 1) % 1) n += note("warn", "Rounded: f must be an integer, so the finest step is 0.001%.");
+    $("#feeNotes").innerHTML = n;
+  }
+  F.oninput = () => sync(F.value, "f");
+  B.oninput = () => sync(Number(B.value) * 10, "b");
+  P.oninput = () => sync(Number(P.value) * 1000, "p");
+  R.oninput = () => sync(R.value);
+  seg("feeMkt", (v) => { mkt = v; sync(F.value); });
+  sync(25);
+  function rev() {
+    const vol = Number($("#revVol").value) || 0, f = Number($("#revF").value) || 0;
+    const d = vol * HL.fToPct(f) / 100;
+    $("#revD").textContent = compact(d); $("#revM").textContent = compact(d * 30); $("#revY").textContent = compact(d * 365);
+    const tgt = Number($("#revTarget").value) || 0;
+    $("#revNeed").textContent = f > 0 ? compact(tgt / 30 / (HL.fToPct(f) / 100)) + " / day" : "—";
+  }
+  ["revVol", "revF", "revTarget"].forEach((id) => ($("#" + id).oninput = rev)); rev();
+  $("#feeTable tbody").innerHTML = [1, 5, 10, 25, 50, 75, 100, 250, 500, 1000].map((f) =>
+    `<tr><td>${f}</td><td>${HL.fToBps(f)}</td><td>${HL.fToPct(f)}%</td><td>"${HL.fToRateString(f)}"</td><td class="r">${usd(100000 * HL.fToPct(f) / 100)}</td><td>${f <= 100 ? '<span class="pill acc">perp + spot</span>' : '<span class="pill">spot only</span>'}</td></tr>`).join("");
+});
+
+// =============== 02 APPROVE ===============
+safe(() => {
+  const nonceEl = $("#apNonce");
+  nonceEl.value = Date.now();
+  $("#apNow").onclick = () => { nonceEl.value = Date.now(); render(); };
+  let signed = null; // {body, signer, by}
+  function current(chainOverride) {
+    return HL.buildApproveAction({
+      builder: bOr($("#apBuilder").value),
+      maxFeeRate: $("#apRate").value.trim(),
+      nonce: Number(nonceEl.value),
+      mainnet: isMain(),
+      signatureChainId: chainOverride || $("#apChain").value,
+    });
+  }
+  function render() {
+    const notes = [];
+    if (!HL.isAddr($("#apBuilder").value) && !builderAddr()) notes.push(note("info", `No builder set. Using demo address <span class="addr">${DEMO_BUILDER}</span>. Set yours in the workspace bar.`));
+    let action;
+    try {
+      action = current();
+      const f = HL.parseRateString(action.maxFeeRate);
+      if (f > HL.LIMITS.spot) notes.push(note("err", "Above the 1% maximum."));
+      else if (f > HL.LIMITS.perp) notes.push(note("warn", `${action.maxFeeRate} lets you charge up to that on spot, but perps are still capped at 0.1%.`));
+      else if (f === 0) notes.push(note("info", `"0%" revokes this builder. Use it to free up one of the user's 10 approval slots.`));
+      else notes.push(note("ok", `Lets you charge up to f=${f} (${HL.fToBps(f)} bps) per order.`));
+      $("#apRate").classList.remove("bad");
+    } catch (e) {
+      $("#apRate").classList.add("bad");
+      $("#apNotes").innerHTML = note("err", esc(e.message)); return;
+    }
+    $("#apNotes").innerHTML = notes.join("");
+    const td = HL.approveTypedData(action);
+    $("#apHashPill").textContent = "hash " + HL.typedHash(td).slice(0, 12) + "…";
+    const k = subState.apOut;
+    const body = signed && signed.body.nonce === action.nonce ? signed.body : { action, nonce: action.nonce, signature: { r: "0x…", s: "0x…", v: 27 } };
+    if (k === "action") setCode("apOut", J(action));
+    else if (k === "typed") setCode("apOut", J(HL.toV4(td)));
+    else if (k === "body") setCode("apOut", `// POST ${isMain() ? "https://api.hyperliquid.xyz" : "https://api.hyperliquid-testnet.xyz"}/exchange\n` + J(body), "js");
+    else if (k === "ts") setCode("apOut",
+`// npm i @nktkas/hyperliquid viem
+import * as hl from "@nktkas/hyperliquid";
+import { privateKeyToAccount } from "viem/accounts";
+
+// Must be the user's MAIN wallet, not an agent/API wallet
+const wallet = privateKeyToAccount(process.env.USER_PK as \`0x\${string}\`);
+const client = new hl.ExchangeClient({
+  transport: new hl.HttpTransport({ isTestnet: ${!isMain()} }),
+  wallet,
+});
+
+await client.approveBuilderFee({
+  builder: "${action.builder}",
+  maxFeeRate: "${action.maxFeeRate}",
+});
+
+// Verify
+const info = new hl.InfoClient({ transport: new hl.HttpTransport({ isTestnet: ${!isMain()} }) });
+const max = await info.maxBuilderFee({ user: wallet.address, builder: "${action.builder}" });
+console.log("approved f =", max); // tenths of a bp`, "js");
+    else setCode("apOut",
+`# pip install hyperliquid-python-sdk
+import eth_account
+from hyperliquid.exchange import Exchange
+from hyperliquid.utils import constants
+
+wallet = eth_account.Account.from_key(USER_PRIVATE_KEY)  # main wallet
+exchange = Exchange(wallet, constants.${isMain() ? "MAINNET" : "TESTNET"}_API_URL)
+
+res = exchange.approve_builder_fee("${action.builder}", "${action.maxFeeRate}")
+print(res)`, "py");
+  }
+  async function showSigned(action, sig, by) {
+    const body = { action, nonce: action.nonce, signature: sig };
+    const signer = HL.recover(HL.approveTypedData(action), sig);
+    signed = { body, signer, by };
+    $("#apSigned").innerHTML = note("ok", `Signed by ${by}. Recovered signer <span class="addr">${signer}</span>. Open <b>exchange body</b> to copy the payload, or paste it into the inspector.`)
+      + (by === "test key" ? note("info", "Submitting this will fail with an unknown-user error. That's expected for an unfunded key, and it confirms your pipeline reaches the exchange.") : "");
+    $$('.subtabs[data-for="apOut"] button').forEach((b) => b.classList.toggle("on", b.dataset.k === "body"));
+    subState.apOut = "body"; render();
+  }
+  $("#apSignTest").onclick = async () => {
+    try { const a = current(); await showSigned(a, await HL.signTyped(getTestWallet(), HL.approveTypedData(a)), "test key"); }
+    catch (e) { $("#apSigned").innerHTML = note("err", esc(e.message)); }
+  };
+  $("#apSignWallet").onclick = async () => {
+    const eth = window.ethereum;
+    if (!eth) { $("#apSigned").innerHTML = note("warn", "No injected wallet in this frame. Copy the <b>eip-712 v4</b> JSON into your wallet tooling, or open the page in a wallet browser."); return; }
+    try {
+      const [acct] = await eth.request({ method: "eth_requestAccounts" });
+      const chainId = await eth.request({ method: "eth_chainId" });
+      const a = current(chainId);
+      const raw = await eth.request({ method: "eth_signTypedData_v4", params: [acct, JSON.stringify(HL.toV4(HL.approveTypedData(a)))] });
+      await showSigned(a, HL.splitSig(raw), "wallet " + acct.slice(0, 8) + "…");
+    } catch (e) { $("#apSigned").innerHTML = note("err", esc(e.message || String(e))); }
+  };
+  ["apBuilder", "apRate", "apNonce"].forEach((id) => ($("#" + id).oninput = render));
+  $("#apChain").onchange = render;
+  subtabs("apOut", render); onWs(render); render();
+});
+
+// =============== 03 ORDER ===============
+safe(() => {
+  let mkt = "perp", signed = null;
+  $("#odNonce").value = Date.now();
+  $("#odNow").onclick = () => { $("#odNonce").value = Date.now(); render(); };
+  seg("odMkt", (v) => {
+    mkt = v;
+    $("#odAssetHint").textContent = v === "perp" ? "perp: index in meta.universe (0 = BTC)" : "spot: 10000 + index in spotMeta.universe";
+    if (v === "spot" && Number($("#odAsset").value) < 10000) $("#odAsset").value = 10107;
+    if (v === "perp" && Number($("#odAsset").value) >= 10000) $("#odAsset").value = 0;
+    render();
+  });
+  function build() {
+    const w = HL.orderWire({ asset: $("#odAsset").value, isBuy: $("#odSide").value === "1", px: $("#odPx").value, sz: $("#odSz").value, reduceOnly: $("#odRo").value === "1", tif: $("#odTif").value });
+    const f = Number($("#odF").value);
+    return HL.buildOrderAction([w], { b: bOr(""), f });
+  }
+  function render() {
+    const notes = [];
+    let action;
+    try { action = build(); } catch (e) { $("#odNotes").innerHTML = note("err", esc(e.message)); return; }
+    const f = action.builder.f, max = Number($("#odMax").value), isBuy = $("#odSide").value === "1";
+    if (!Number.isInteger(f) || f < 0) notes.push(note("err", "f must be a non-negative integer."));
+    if (f > HL.LIMITS[mkt]) notes.push(note("err", `f=${f} exceeds the ${mkt} cap (${HL.LIMITS[mkt]}).`));
+    if (f > max) notes.push(note("err", `f=${f} is above the user's approved max of ${max}. The order will be rejected; ask the user to re-approve.`));
+    if (mkt === "spot" && isBuy) notes.push(note("warn", "Spot buy: builder fees don't apply to the buying side of spot trades. This fill earns $0."));
+    if (!notes.length) notes.push(note("ok", `Valid. Earns ${HL.fToBps(f)} bps ≈ ${usd(Number(action.orders[0].p) * Number(action.orders[0].s) * HL.fToPct(f) / 100, 4)} if fully filled.`));
+    if (!builderAddr()) notes.push(note("info", "Using demo builder address. Set yours in the workspace bar."));
+    $("#odNotes").innerHTML = notes.join("");
+    const nonce = Number($("#odNonce").value);
+    const h = HL.actionHash(action, nonce);
+    $("#odHashPill").textContent = "action hash " + h.slice(0, 12) + "…";
+    const k = subState.odOut;
+    const body = signed && signed.hash === h ? signed.body : { action, nonce, signature: { r: "0x…", s: "0x…", v: 27 } };
+    const o = action.orders[0];
+    if (k === "action") setCode("odOut", J(action));
+    else if (k === "agent") setCode("odOut", `// connectionId = keccak256(msgpack(action) ‖ nonce:u64be ‖ 0x00)\n` + J(HL.toV4(HL.l1TypedData(h, isMain()))), "js");
+    else if (k === "body") setCode("odOut", J(body));
+    else if (k === "ts") setCode("odOut",
+`// Agent wallets can sign orders. Only the approval needs the main wallet.
+await client.order({
+  orders: [{
+    a: ${o.a}, b: ${o.b}, p: "${o.p}", s: "${o.s}", r: ${o.r},
+    t: { limit: { tif: "${o.t.limit.tif}" } },
+  }],
+  grouping: "na",
+  builder: { b: "${action.builder.b}", f: ${f} }, // ${HL.fToBps(f)} bps
+});`, "js");
+    else setCode("odOut",
+`# exchange = Exchange(agent_or_user_wallet, base_url, account_address=USER)
+res = exchange.order(
+    "<COIN>",            # asset ${o.a}
+    ${o.b ? "True" : "False"},                # is_buy
+    ${o.s},           # sz
+    ${o.p},          # limit_px
+    {"limit": {"tif": "${o.t.limit.tif}"}},
+    reduce_only=${o.r ? "True" : "False"},
+    builder={"b": "${action.builder.b}", "f": ${f}},
+)`, "py");
+  }
+  $("#odSign").onclick = async () => {
+    try {
+      const action = build(), nonce = Number($("#odNonce").value), h = HL.actionHash(action, nonce);
+      const sig = await HL.signTyped(getTestWallet(), HL.l1TypedData(h, isMain()));
+      signed = { hash: h, body: { action, nonce, signature: sig } };
+      const who = HL.recover(HL.l1TypedData(h, isMain()), sig);
+      $("#odSigned").innerHTML = note("ok", `Signed as agent <span class="addr">${who}</span> on ${isMain() ? "mainnet" : "testnet"}.`);
+      $$('.subtabs[data-for="odOut"] button').forEach((b) => b.classList.toggle("on", b.dataset.k === "body"));
+      subState.odOut = "body"; render();
+    } catch (e) { $("#odSigned").innerHTML = note("err", esc(e.message)); }
+  };
+  ["odAsset", "odPx", "odSz", "odF", "odMax", "odNonce"].forEach((id) => ($("#" + id).oninput = render));
+  ["odSide", "odTif", "odRo"].forEach((id) => ($("#" + id).onchange = render));
+  subtabs("odOut", render); onWs(render); render();
+});
+
+// =============== 04 INSPECT ===============
+safe(() => {
+  async function example(kind) {
+    const w = getTestWallet(), nonce = Date.now();
+    let body;
+    if (kind === "a") {
+      const a = HL.buildApproveAction({ builder: bOr(""), maxFeeRate: "0.05%", nonce, mainnet: isMain() });
+      body = { action: a, nonce, signature: await HL.signTyped(w, HL.approveTypedData(a)) };
+    } else {
+      const a = HL.buildOrderAction([HL.orderWire({ asset: 0, isBuy: true, px: 95000, sz: 0.001 })], { b: bOr(""), f: 25 });
+      body = { action: a, nonce, signature: await HL.signTyped(w, HL.l1TypedData(HL.actionHash(a, nonce), isMain())) };
+    }
+    $("#inBody").value = J(body); $("#inExpect").value = w.address; run();
+  }
+  $("#inExA").onclick = () => example("a");
+  $("#inExO").onclick = () => example("o");
+  function run() {
+    const txt = $("#inBody").value.trim();
+    if (!txt) { $("#inOut").innerHTML = '<p class="num">Waiting for input.</p>'; return; }
+    let body;
+    try { body = JSON.parse(txt); } catch (e) { $("#inOut").innerHTML = note("err", "Invalid JSON: " + esc(e.message)); return; }
+    try {
+      const r = HL.inspectExchangeBody(body, isMain());
+      const exp = $("#inExpect").value.trim();
+      let match = "";
+      if (HL.isAddr(exp)) match = r.signer.toLowerCase() === exp.toLowerCase()
+        ? note("ok", "Signer matches the expected address.")
+        : note("err", "Signer does NOT match. Common causes: wrong network (source a/b or hyperliquidChain), action keys re-ordered or floats not normalized before hashing, nonce mismatch, or the approval signed by an agent instead of the main wallet.");
+      $("#inOut").innerHTML =
+        `<div class="stat"><span>${esc(r.kind)}</span><b class="acc addr" style="font-size:15px">${r.signer}</b></div><div class="sp"></div>${match}` +
+        r.notes.map((n) => note(n.lvl, esc(n.msg))).join("") +
+        `<div class="num mt">EIP-712 digest ${r.typedHash}</div><div class="code mt"><pre>${hl(J(HL.toV4(r.td)))}</pre></div>`;
+    } catch (e) { $("#inOut").innerHTML = note("err", esc(e.message)); }
+  }
+  $("#inRun").onclick = run;
+  onWs(() => $("#inBody").value && run());
+});
+
+// =============== 05 QUERY ===============
+safe(() => {
+  const api = () => (isMain() ? "https://api.hyperliquid.xyz/info" : "https://api.hyperliquid-testnet.xyz/info");
+  function payload() {
+    const t = $("#qType").value, u = $("#qUser").value.trim() || "0xUSER", b = bOr("");
+    if (t === "maxBuilderFee") return { type: t, user: u, builder: b };
+    if (t === "clearinghouseState" || t === "referral") return { type: t, user: b };
+    return { type: t, user: u };
+  }
+  function render() {
+    const t = $("#qType").value;
+    $("#qUserWrap").classList.toggle("hide", t === "clearinghouseState" || t === "referral");
+    const p = payload(), j = JSON.stringify(p), k = subState.qOut;
+    if (k === "curl") setCode("qOut", `curl -s -X POST ${api()} \\\n  -H 'Content-Type: application/json' \\\n  -d '${j}'`, "sh");
+    else if (k === "fetch") setCode("qOut", `const res = await fetch("${api()}", {\n  method: "POST",\n  headers: { "Content-Type": "application/json" },\n  body: JSON.stringify(${j}),\n});\nconsole.log(await res.json());`, "js");
+    else if (k === "py") setCode("qOut", `import requests\nr = requests.post("${api()}", json=${j.replace(/true/g, "True")})\nprint(r.json())`, "py");
+    else setCode("qOut", J(p));
+    decode();
+  }
+  function findKeys(o, re, path = "", out = []) {
+    if (o && typeof o === "object") for (const [k, v] of Object.entries(o)) {
+      const p = path ? path + "." + k : k;
+      if (re.test(k) && (typeof v !== "object" || v === null)) out.push([p, v]);
+      findKeys(v, re, p, out);
+    }
+    return out;
+  }
+  function decode() {
+    const t = $("#qType").value, raw = $("#qResp").value.trim(), out = $("#qDecoded");
+    if (!raw) { out.innerHTML = '<p class="num">Paste a response to decode it.</p>'; return; }
+    let v; try { v = JSON.parse(raw); } catch { out.innerHTML = note("err", "Not valid JSON."); return; }
+    if (t === "maxBuilderFee") {
+      const f = Number(v);
+      if (!Number.isFinite(f)) { out.innerHTML = note("err", "Expected a bare integer."); return; }
+      out.innerHTML = f === 0 ? note("warn", "Not approved (0). Prompt the user to sign approveBuilderFee before tagging orders.")
+        : `<div class="grid g3"><div class="stat"><span>approved f</span><b class="acc">${f}</b></div><div class="stat"><span>bps</span><b>${HL.fToBps(f)}</b></div><div class="stat"><span>percent</span><b>${HL.fToPct(f)}%</b></div></div><div class="sp"></div>` +
+          note("ok", `Any order with builder.f ≤ ${f} will be accepted${f > 100 ? " (perps still capped at 100)" : ""}.`);
+    } else if (t === "clearinghouseState") {
+      const av = Number(v?.marginSummary?.accountValue);
+      if (!Number.isFinite(av)) { out.innerHTML = note("err", "No marginSummary.accountValue found."); return; }
+      out.innerHTML = `<div class="stat"><span>perps account value</span><b class="${av >= 100 ? "acc" : ""}">${usd(av)}</b></div><div class="sp"></div>` +
+        (av >= 100 ? note("ok", "Meets the 100 USDC minimum for builders.") : note("err", `Needs at least 100 USDC in perps account value. Short by ${usd(100 - av)}.`));
+    } else if (t === "referral") {
+      const ks = findKeys(v, /builder/i);
+      out.innerHTML = ks.length ? `<table><tbody>${ks.map(([k, x]) => `<tr><td>${esc(k)}</td><td class="r">${esc(x)}</td></tr>`).join("")}</tbody></table>` + note("info", "Builder fees are claimed through the referral reward claim flow.")
+        : note("warn", "No builder-related fields found in this response.");
+    } else {
+      const arr = Array.isArray(v) ? v : [];
+      const withB = arr.filter((x) => x && x.builderFee != null);
+      const tot = withB.reduce((s, x) => s + Number(x.builderFee || 0), 0);
+      out.innerHTML = `<div class="grid g3"><div class="stat"><span>fills</span><b>${arr.length}</b></div><div class="stat"><span>with builder fee</span><b>${withB.length}</b></div><div class="stat"><span>builder fees</span><b class="acc">${usd(tot, 4)}</b></div></div>`;
+    }
+  }
+  $("#qType").onchange = render; $("#qUser").oninput = render; $("#qResp").oninput = decode;
+  subtabs("qOut", render); onWs(render); render();
+});
+
+// =============== 06 FILLS ===============
+safe(() => {
+  const today = new Date(), d0 = new Date(today.getTime() - 6 * 864e5);
+  const iso = (d) => d.toISOString().slice(0, 10);
+  $("#flFrom").value = iso(d0); $("#flTo").value = iso(new Date(today.getTime() - 864e5));
+  function days() {
+    const a = new Date($("#flFrom").value + "T00:00:00Z"), b = new Date($("#flTo").value + "T00:00:00Z"), out = [];
+    if (isNaN(a) || isNaN(b)) return out;
+    for (let t = a.getTime(); t <= b.getTime() && out.length < 120; t += 864e5) out.push(new Date(t).toISOString().slice(0, 10).replace(/-/g, ""));
+    return out;
+  }
+  function render() {
+    const b = bOr(""), ds = days();
+    if (subState.flOut === "urls") setCode("flOut", (builderAddr() ? "" : "# demo builder — set yours in the workspace bar\n") + ds.map((d) => HL.fillsUrl(b, d, isMain())).join("\n"), "sh");
+    else setCode("flOut",
+`#!/usr/bin/env bash
+# needs: curl, lz4  (brew install lz4 / apt install lz4)
+set -euo pipefail
+B="${b.toLowerCase()}"   # must be lowercase
+mkdir -p fills && cd fills
+for D in ${ds.join(" ")}; do
+  curl -fsSLO "https://stats-data.hyperliquid.xyz/${isMain() ? "Mainnet" : "Testnet"}/builder_fills/$B/$D.csv.lz4" \\
+    && lz4 -dqf "$D.csv.lz4" "$D.csv" || echo "no data for $D"
+done
+# merge, keeping one header
+awk 'FNR==1 && NR!=1 {next} {print}' *.csv > all.csv`, "sh");
+  }
+  $("#flFrom").onchange = render; $("#flTo").onchange = render;
+  subtabs("flOut", render); onWs(render); render();
+
+  // --- parsing ---
+  function parseCSV(text) {
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    const split = (l) => { const out = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === "," && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out; };
+    const head = split(lines[0]).map((h) => h.trim().toLowerCase());
+    return { head, rows: lines.slice(1).map(split) };
+  }
+  function col(head, ...cands) {
+    for (const c of cands) { const i = head.findIndex((h) => (c instanceof RegExp ? c.test(h) : h === c)); if (i >= 0) return i; }
+    return -1;
+  }
+  function analyze(text, label) {
+    const { head, rows } = parseCSV(text);
+    const ci = {
+      fee: col(head, "builder_fee", /builder.*fee/, "builderfee"),
+      px: col(head, "px", "price"), sz: col(head, "sz", "size"),
+      coin: col(head, "coin", "asset", "symbol"), user: col(head, "user", "address", "account"),
+      time: col(head, "time", "timestamp", /time/), side: col(head, "side", "dir"),
+    };
+    const missing = Object.entries(ci).filter(([k, v]) => v < 0 && ["fee", "px", "sz"].includes(k)).map(([k]) => k);
+    $("#flMeta").innerHTML = `<p class="num">${rows.length.toLocaleString()} rows · columns: ${head.map(esc).join(", ")}</p>` +
+      (missing.length ? note("warn", `Couldn't find column(s): ${missing.join(", ")}. Those metrics are skipped.`) : "");
+    let fees = 0, notional = 0; const users = new Map(), coins = new Map(), hours = new Array(24).fill(0);
+    for (const r of rows) {
+      const fee = ci.fee >= 0 ? Number(r[ci.fee]) || 0 : 0;
+      const n = ci.px >= 0 && ci.sz >= 0 ? (Number(r[ci.px]) || 0) * Math.abs(Number(r[ci.sz]) || 0) : 0;
+      fees += fee; notional += n;
+      if (ci.user >= 0) { const u = r[ci.user]; const e = users.get(u) || [0, 0, 0]; e[0]++; e[1] += n; e[2] += fee; users.set(u, e); }
+      if (ci.coin >= 0) { const c = r[ci.coin]; const e = coins.get(c) || [0, 0, 0]; e[0]++; e[1] += n; e[2] += fee; coins.set(c, e); }
+      if (ci.time >= 0) {
+        const tv = r[ci.time]; const num = Number(tv);
+        const d = Number.isFinite(num) && num > 1e11 ? new Date(num) : new Date(tv);
+        if (!isNaN(d)) hours[d.getUTCHours()] += fee;
+      }
+    }
+    $("#flResults").classList.remove("hide");
+    $("#flSrc").textContent = label;
+    const avgBps = notional ? (fees / notional) * 1e4 : 0;
+    $("#flKpis").innerHTML = [
+      ["builder fees", usd(fees), "acc"], ["routed notional", compact(notional)], ["fills", rows.length.toLocaleString()],
+      ["unique users", users.size ? users.size.toLocaleString() : "—"], ["avg take (bps)", avgBps.toFixed(2)],
+      ["fees / user", users.size ? usd(fees / users.size) : "—"], ["markets", coins.size || "—"], ["avg fill", rows.length ? compact(notional / rows.length) : "—"],
+    ].map(([k, v, c]) => `<div class="stat"><span>${k}</span><b class="${c || ""}">${v}</b></div>`).join("");
+    const table = (m, id, label) => {
+      const top = [...m.entries()].sort((a, b) => b[1][2] - a[1][2] || b[1][1] - a[1][1]).slice(0, 10);
+      $(id).innerHTML = `<thead><tr><th>${label}</th><th class="r">fills</th><th class="r">notional</th><th class="r">fees</th></tr></thead><tbody>` +
+        (top.length ? top.map(([k, v]) => `<tr><td>${esc(label === "user" ? k.slice(0, 6) + "…" + k.slice(-4) : k)}</td><td class="r">${v[0]}</td><td class="r">${compact(v[1])}</td><td class="r">${usd(v[2])}</td></tr>`).join("") : `<tr><td colspan="4" class="num">column not found</td></tr>`) + "</tbody>";
+    };
+    table(coins, "#flCoins", "coin"); table(users, "#flUsers", "user");
+    // chart
+    const W = 720, H = 180, P = 26, max = Math.max(...hours, 1e-9), bw = (W - P) / 24;
+    $("#flChart").innerHTML = `<svg viewBox="0 0 ${W} ${H + 22}" width="100%" role="img" aria-label="builder fees by UTC hour">` +
+      [0.5, 1].map((g) => `<line x1="${P}" x2="${W}" y1="${H - (H - 10) * g}" y2="${H - (H - 10) * g}" stroke="#222a28"/><text x="0" y="${H - (H - 10) * g + 4}" font-size="10" fill="#5f6b66">${compact(max * g).replace("$", "")}</text>`).join("") +
+      hours.map((v, i) => { const h = (H - 10) * (v / max); return `<rect x="${P + i * bw + 2}" y="${H - h}" width="${bw - 4}" height="${Math.max(h, 1)}" rx="2" fill="${v === max ? "#b6ff4d" : "#79e0c0"}" opacity="${v === max ? 1 : 0.55}"><title>${i}:00 UTC · ${usd(v)}</title></rect>` + (i % 3 === 0 ? `<text x="${P + i * bw + bw / 2}" y="${H + 15}" font-size="10" fill="#5f6b66" text-anchor="middle">${String(i).padStart(2, "0")}</text>` : ""); }).join("") +
+      `<line x1="${P}" x2="${W}" y1="${H}" y2="${H}" stroke="#2d3734"/></svg>`;
+  }
+  async function handle(files) {
+    const texts = [];
+    for (const f of files) {
+      try {
+        const buf = new Uint8Array(await f.arrayBuffer());
+        const isLz4 = buf[0] === 0x04 && buf[1] === 0x22 && buf[2] === 0x4d && buf[3] === 0x18;
+        texts.push(new TextDecoder().decode(isLz4 ? HL.lz4Decode(buf) : buf));
+      } catch (e) { $("#flMeta").innerHTML = note("err", esc(f.name + ": " + e.message)); return; }
+    }
+    const merged = texts.map((t, i) => (i ? t.split(/\r?\n/).slice(1).join("\n") : t)).join("\n");
+    analyze(merged, files.length === 1 ? files[0].name : files.length + " files");
+  }
+  const drop = $("#flDrop"), file = $("#flFile");
+  drop.onclick = () => file.click();
+  file.onchange = () => file.files.length && handle([...file.files]);
+  drop.ondragover = (e) => { e.preventDefault(); drop.classList.add("hot"); };
+  drop.ondragleave = () => drop.classList.remove("hot");
+  drop.ondrop = (e) => { e.preventDefault(); drop.classList.remove("hot"); e.dataTransfer.files.length && handle([...e.dataTransfer.files]); };
+  $("#flSample").onclick = () => {
+    // synthetic data, clearly labelled
+    let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const coins = [["BTC", 95000, 0.02], ["ETH", 3400, 0.4], ["SOL", 210, 8], ["HYPE", 38, 40], ["XRP", 2.4, 900], ["kPEPE", 0.019, 50000]];
+    const users = Array.from({ length: 140 }, () => "0x" + Array.from({ length: 40 }, () => "0123456789abcdef"[Math.floor(rnd() * 16)]).join(""));
+    const base = Date.UTC(2026, 10, 17);
+    const lines = ["time,user,coin,side,px,sz,builder_fee"];
+    for (let i = 0; i < 6000; i++) {
+      const c = coins[Math.floor(Math.pow(rnd(), 1.6) * coins.length)];
+      const u = users[Math.floor(Math.pow(rnd(), 2.2) * users.length)];
+      const hr = Math.floor((rnd() * 24 + (rnd() < 0.4 ? 14 : 0)) % 24);
+      const px = c[1] * (1 + (rnd() - 0.5) * 0.02), sz = c[2] * (0.1 + rnd() * 3);
+      const side = rnd() < 0.5 ? "B" : "A";
+      lines.push(`${base + hr * 36e5 + Math.floor(rnd() * 36e5)},${u},${c[0]},${side},${px.toFixed(5)},${sz.toFixed(4)},${(px * sz * 0.00025).toFixed(6)}`);
+    }
+    analyze(lines.join("\n"), "synthetic sample");
+  };
+});
+
+// =============== 07 PREFLIGHT ===============
+safe(() => {
+  const items = [
+    ["Builder account holds ≥ 100 USDC perps account value", "Required for a builder address to collect fees.", "#query"],
+    ["Builder account uses the standard account abstraction mode", "Builder codes require the standard mode on the builder account.", null],
+    ["Approval flow signs with the user's main wallet", "ApproveBuilderFee can't be signed by an agent/API wallet. Prompt the connected EOA, not your session key.", "#approve"],
+    ["Handle the 10-approval limit", "Each user can hold at most 10 active builder approvals. Surface the error and explain how to revoke one (approve \"0%\").", "#approve"],
+    ["Check maxBuilderFee before tagging orders", "If builder.f is above what the user approved, the order is rejected. Cache the value per session and re-prompt when needed.", "#query"],
+    ["f respects market caps", "≤ 100 on perps (0.1%), ≤ 1000 on spot (1%). f is an integer in tenths of a bp.", "#fees"],
+    ["Expect $0 on spot buys", "Builder fees only apply to fees collected in the quote/collateral asset, so spot buys earn nothing.", "#fees"],
+    ["Lowercase builder.b before hashing", "The SDKs lowercase the builder address in the action. Order actions are msgpack-hashed byte for byte.", "#order"],
+    ["Normalize prices and sizes to wire format", "Strip trailing zeros (\"100\", not \"100.0\"), keep ≤ 8 decimals, and keep the key order a, b, p, s, r, t.", "#inspect"],
+    ["Claim fees via referral rewards", "Builder fees accrue to the referral reward balance and are claimed through the usual referral claim.", "#query"],
+    ["Monitor the builder_fills dataset", "Daily LZ4 CSVs per builder: track revenue, users and markets, and reconcile against claims.", "#fills"],
+  ];
+  const state = store.get("pf", {});
+  function render() {
+    const done = items.filter((_, i) => state[i]).length;
+    $("#pfCount").textContent = `${done} / ${items.length} ready`;
+    $("#pfBar").style.width = (done / items.length) * 100 + "%";
+    $("#pfList").innerHTML = items.map(([t, d, l], i) =>
+      `<label class="check ${state[i] ? "done" : ""}"><input type="checkbox" data-i="${i}" ${state[i] ? "checked" : ""}><div><b>${esc(t)}</b><p>${esc(d)}${l ? ` <a href="${l}">open tool →</a>` : ""}</p></div></label>`).join("");
+  }
+  $("#pfList").addEventListener("change", (e) => { const i = e.target.dataset.i; if (i == null) return; state[i] = e.target.checked; store.set("pf", state); render(); });
+  render();
+});
+})();
+</script>
+</body>
+</html>
