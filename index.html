@@ -1010,13 +1010,36 @@ safe(() => {
   // Offline snapshot: perp indices verified against hyperliquid-python-sdk test fixtures (indices are append-only).
   const SNAP_PERP = [["BTC", 0, 5, 50], ["ETH", 1, 4, 50], ["ATOM", 2, 2, 50], ["MATIC", 3, 1, 50], ["DYDX", 4, 1, 50], ["SOL", 5, 2, 50], ["AVAX", 6, 2, 50], ["BNB", 7, 3, 50], ["APE", 8, 1, 50], ["OP", 9, 1, 50], ["LTC", 10, 2, 50], ["ARB", 11, 1, 50], ["DOGE", 12, 0, 50], ["INJ", 13, 1, 50], ["SUI", 14, 1, 50], ["kPEPE", 15, 0, 50], ["CRV", 16, 1, 50], ["LDO", 17, 1, 50], ["LINK", 18, 1, 50], ["STX", 19, 1, 50], ["RNDR", 20, 1, 50], ["CFX", 21, 0, 50], ["FTM", 22, 0, 50], ["GMX", 23, 2, 50], ["SNX", 24, 1, 50], ["XRP", 25, 0, 50], ["BCH", 26, 3, 50], ["APT", 27, 2, 50]].map(([name, id, sz, lev]) => ({ name, id, sz, lev }));
   const A = { perp: SNAP_PERP, spot: [{ name: "PURR/USDC", id: 10000, sz: 0 }], live: false };
+  A.mids = {};
+  // Round a price to Hyperliquid's tick rules: ≤ 5 significant figures and ≤ (6|8 − szDecimals) decimals.
+  const roundPx = (px, a) => {
+    const maxDec = (a.id >= 10000 ? 8 : 6) - a.sz;
+    let v = Number(Number(px).toPrecision(5));
+    return Number(v.toFixed(Math.max(0, maxDec)));
+  };
+  const roundSz = (sz, a) => {
+    const unit = Math.pow(10, -a.sz);
+    return Math.max(unit, Math.round(Number(sz) / unit) * unit).toFixed(a.sz) * 1;
+  };
+  // When the user picks a market, fill in a price and size that are valid for it.
+  function applyDefaults(a) {
+    if (!a) return;
+    const mid = Number(A.mids[a.raw || a.name]);
+    if (mid > 0) {
+      $("#odPx").value = HL.floatToWire(roundPx(mid, a));
+      $("#odSz").value = HL.floatToWire(roundSz(50 / mid, a));
+    } else {
+      $("#odSz").value = HL.floatToWire(roundSz($("#odSz").value || 0, a));
+    }
+  }
   const findAsset = (id) => [...A.perp, ...A.spot].find((x) => x.id === Number(id));
   const findByName = (n) => { n = String(n).trim().toUpperCase(); return [...A.perp, ...A.spot].find((x) => x.name.toUpperCase() === n || (x.raw && x.raw.toUpperCase() === n)); };
   async function loadAssets() {
     const url = isMain() ? "https://api.hyperliquid.xyz/info" : "https://api.hyperliquid-testnet.xyz/info";
     const post = (b) => fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(b) }).then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); });
     try {
-      const [m, sm] = await Promise.all([post({ type: "meta" }), post({ type: "spotMeta" })]);
+      const [m, sm, mids] = await Promise.all([post({ type: "meta" }), post({ type: "spotMeta" }), post({ type: "allMids" }).catch(() => ({}))]);
+      A.mids = mids || {};
       A.perp = m.universe.map((a, i) => ({ name: a.name, id: i, sz: a.szDecimals, lev: a.maxLeverage, del: !!a.isDelisted }));
       A.spot = sm.universe.map((u) => { const b = sm.tokens[u.tokens[0]], q = sm.tokens[u.tokens[1]]; return { name: (b ? b.name : u.name) + "/" + (q ? q.name : "?"), raw: u.name, id: 10000 + u.index, sz: b ? b.szDecimals : 0 }; });
       A.live = true;
@@ -1030,15 +1053,16 @@ safe(() => {
     const a = findAsset($("#odAsset").value);
     const maxDec = (mkt === "perp" ? 6 : 8) - (a ? a.sz : 0);
     $("#odAssetHint").innerHTML = a
-      ? `${esc(a.name)} → asset ${a.id} · size ≤ ${a.sz} decimals · price ≤ 5 sig figs &amp; ≤ ${maxDec} decimals${a.lev ? ` · max ${a.lev}x` : ""}${a.del ? " · <span style='color:var(--warn)'>delisted</span>" : ""}`
+      ? `${esc(a.name)} → asset ${a.id}${Number(A.mids[a.raw || a.name]) ? ` · mid ${A.mids[a.raw || a.name]}` : ""} · size ≤ ${a.sz} decimals · price ≤ 5 sig figs &amp; ≤ ${maxDec} decimals${a.lev ? ` · max ${a.lev}x` : ""}${a.del ? " · <span style='color:var(--warn)'>delisted</span>" : ""}`
       : (mkt === "perp" ? "perp id = index in meta.universe" : "spot id = 10000 + index in spotMeta.universe") + (A.live ? "" : " · tap lookup for known ids");
   }
   function syncFromId() { const a = findAsset($("#odAsset").value); if (a) $("#odCoin").value = a.name; hint(); }
   function setMkt(v) { mkt = v; $$("#odMkt button").forEach((b) => b.classList.toggle("on", b.dataset.v === v)); fillDatalist(); }
   $("#odCoin").addEventListener("input", () => {
     const a = findByName($("#odCoin").value); if (!a) { hint(); return; }
-    $("#odAsset").value = a.id; setMkt(a.id >= 10000 ? "spot" : "perp"); hint(); render();
+    $("#odAsset").value = a.id; setMkt(a.id >= 10000 ? "spot" : "perp"); applyDefaults(a); hint(); render();
   });
+  $("#odAsset").addEventListener("change", () => { applyDefaults(findAsset($("#odAsset").value)); render(); });
   $("#odAsset").addEventListener("input", () => { setMkt(Number($("#odAsset").value) >= 10000 ? "spot" : "perp"); syncFromId(); });
   $("#odNonce").value = Date.now();
   $("#odNow").onclick = () => { $("#odNonce").value = Date.now(); render(); };
@@ -1046,7 +1070,7 @@ safe(() => {
     setMkt(v);
     if (v === "spot" && Number($("#odAsset").value) < 10000) $("#odAsset").value = A.spot[0].id;
     if (v === "perp" && Number($("#odAsset").value) >= 10000) $("#odAsset").value = 0;
-    syncFromId(); render();
+    syncFromId(); applyDefaults(findAsset($("#odAsset").value)); render();
   });
   // lookup sheet
   let lkMkt = "perp";
@@ -1072,7 +1096,7 @@ safe(() => {
   addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
   $("#lkTable").addEventListener("click", (e) => {
     const tr = e.target.closest("tr[data-id]"); if (!tr) return;
-    $("#odAsset").value = tr.dataset.id; setMkt(Number(tr.dataset.id) >= 10000 ? "spot" : "perp"); syncFromId(); closeSheet(); render();
+    $("#odAsset").value = tr.dataset.id; setMkt(Number(tr.dataset.id) >= 10000 ? "spot" : "perp"); syncFromId(); applyDefaults(findAsset(tr.dataset.id)); closeSheet(); render();
   });
   function build() {
     const w = HL.orderWire({ asset: $("#odAsset").value, isBuy: $("#odSide").value === "1", px: $("#odPx").value, sz: $("#odSz").value, reduceOnly: $("#odRo").value === "1", tif: $("#odTif").value });
@@ -1090,7 +1114,9 @@ safe(() => {
     const asset = findAsset(action.orders[0].a);
     if (asset) {
       const o0 = action.orders[0], dec = (x) => (x.split(".")[1] || "").length;
-      if (dec(o0.s) > asset.sz) notes.push(note("err", `Size ${o0.s} has ${dec(o0.s)} decimals; ${asset.name} allows ${asset.sz}.`));
+      if (dec(o0.s) > asset.sz) notes.push(note("err", `Size ${o0.s} has ${dec(o0.s)} decimals; ${asset.name} allows ${asset.sz}${asset.sz === 0 ? " (whole units only)" : ""}. Try ${HL.floatToWire(roundSz(o0.s, asset))}.`));
+      const notional = Number(o0.p) * Number(o0.s);
+      if (notional > 0 && notional < 10) notes.push(note("warn", `Order value is ${usd(notional)}. Hyperliquid rejects orders under $10.`));
       const maxDec = (mkt === "perp" ? 6 : 8) - asset.sz;
       if (o0.p.includes(".")) {
         const sig = o0.p.replace(".", "").replace(/^0+/, "").length;
